@@ -14,14 +14,21 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 
 public class MainActivity extends ActionBarActivity {
     private static final String TAG = "MainActivity";
 
-    private NetTool NetTool = new NetTool();
+    private static final int PROGRESS_STATE_IDLE = 0X0;
+    private static final int PROGRESS_STATE_SCAN = 0X1;
+
+    private NetTool NTMyTool = new NetTool();
     private TextView TWCurrentIP;
     private String CSCurrentIP;
     private Button BTScan;
@@ -33,6 +40,8 @@ public class MainActivity extends ActionBarActivity {
     private int BTScanCount = 0x0;
     private int BTScanTotal = 0x0;
 
+    private int iProgressState = PROGRESS_STATE_IDLE;
+
     private String StringStartAddress;
     private String StringEndAddress;
 
@@ -41,6 +50,7 @@ public class MainActivity extends ActionBarActivity {
 
     private Handler handler = new Handler();
     private ExecutorService executorService = Executors.newFixedThreadPool(5);
+    private ArrayList<Future> ListFTaskStatus = new ArrayList<Future>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,16 +61,16 @@ public class MainActivity extends ActionBarActivity {
         ETEndAddress = (EditText) findViewById(R.id.editTextScanEndIP);
 
         TWCurrentIP = (TextView) findViewById(R.id.TextViewCurrentIP);
-        CSCurrentIP = NetTool.getLocAddress();
+        CSCurrentIP = NTMyTool.getLocAddress();
         if (TWCurrentIP != null) {
             if ((CSCurrentIP != null) && (CSCurrentIP.compareTo("") != 0)) {
                 TWCurrentIP.setText(CSCurrentIP);
 
                 int csEnd = CSCurrentIP.lastIndexOf('.');
-                String IpTmp = new String(CSCurrentIP.substring(0, csEnd));
+                String IpTmp = CSCurrentIP.substring(0, csEnd);
                 if (csEnd != -1) {
-                    StringStartAddress = new String(String.format(IpTmp + ".%d", 0x0));
-                    StringEndAddress = new String(String.format(IpTmp + ".%d", 0xff));
+                    StringStartAddress = String.format(IpTmp + ".%d", 0x0);
+                    StringEndAddress = String.format(IpTmp + ".%d", 0xff);
 
                     ETStartAddress.setText(StringStartAddress);
                     ETEndAddress.setText(StringEndAddress);
@@ -86,11 +96,12 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void ScanThread(final String ip) {
-        executorService.submit(new Runnable() {
+        Future futureTmp;
+        futureTmp = executorService.submit(new Runnable() {
             public void run() {
                 boolean status;
-                status = NetTool.ping(ip);
-                if (status == true) {
+                status = NTMyTool.ping(ip);
+                if (status) {
                     handler.post(new Runnable() {
                         public void run() {
                             APIPList.add(ip);
@@ -105,14 +116,46 @@ public class MainActivity extends ActionBarActivity {
                     public void run() {
                         PBScanProgress.setProgress(BTScanCount * 100 / BTScanTotal);
                         if (BTScanCount == BTScanTotal) {
-                            BTScan.setEnabled(true);
-                            PBScanProgress.setVisibility(View.INVISIBLE);
+                            setCtrlState(true);
+                            ListFTaskStatus.clear();
                         }
                     }
                 });
             }
 
         });
+
+        ListFTaskStatus.add(futureTmp);
+    }
+
+    public void setCtrlState(boolean enable){
+        //BTScan.setEnabled(enable);
+        BTScan.setText((!enable)?"Cancel":"Scan");
+        PBScanProgress.setVisibility((enable) ? View.INVISIBLE : View.VISIBLE);
+        ETStartAddress.setEnabled(enable);
+        ETEndAddress.setEnabled(enable);
+
+        iProgressState = enable?PROGRESS_STATE_IDLE:PROGRESS_STATE_SCAN;
+    }
+
+    public void cancelExecPing(){
+        Future futureTmp;
+        for(Iterator<Future> iterator = ListFTaskStatus.iterator();iterator.hasNext();) {
+            futureTmp = iterator.next();
+            if(!futureTmp.isDone()){
+                futureTmp.cancel(true);
+            }
+        }
+        /* Check for all task and dump status */
+        int count = 0;
+        for(Iterator<Future> iterator = ListFTaskStatus.iterator();iterator.hasNext();) {
+            futureTmp = iterator.next();
+            count++;
+            if((!futureTmp.isDone()) && (!futureTmp.isCancelled())){
+                Log.d(TAG, "Task:" + count + "is not quit normally");
+            }
+        }
+        ListFTaskStatus.clear();
     }
 
     public void ScanClick(View v) {
@@ -121,38 +164,42 @@ public class MainActivity extends ActionBarActivity {
         int csEnd;
         int dAddStart, dAddEnd;
 
-        APIPList.clear();
+        if(iProgressState == PROGRESS_STATE_IDLE) {
+            APIPList.clear();
 
-        StringStartAddress = ETStartAddress.getText().toString();
-        StringEndAddress = ETEndAddress.getText().toString();
+            StringStartAddress = ETStartAddress.getText().toString();
+            StringEndAddress = ETEndAddress.getText().toString();
 
-        if (NetTool.compareSameSubIP(StringStartAddress, StringEndAddress) == false) {
-            LVIPList.setAdapter(APIPList);
-            return;
-        }
+            if (!NetTool.compareSameSubIP(StringStartAddress, StringEndAddress)) {
+                LVIPList.setAdapter(APIPList);
+                return;
+            }
 
-        dAddStart = NetTool.getIPNumber(StringStartAddress);
-        dAddEnd = NetTool.getIPNumber(StringEndAddress);
-        if((dAddStart == -1) || (dAddEnd == -1) || ((dAddEnd -dAddStart) < 0)){
-            LVIPList.setAdapter(APIPList);
-            return;
-        }
+            dAddStart = NetTool.getIPNumber(StringStartAddress);
+            dAddEnd = NetTool.getIPNumber(StringEndAddress);
+            if ((dAddStart == -1) || (dAddEnd == -1) || ((dAddEnd - dAddStart) < 0)) {
+                LVIPList.setAdapter(APIPList);
+                return;
+            }
 
-        csEnd = CSCurrentIP.lastIndexOf('.');
-        if (csEnd == -1) {
-            LVIPList.setAdapter(APIPList);
-            return;
-        }
-        IPTmp = new String(CSCurrentIP.substring(0, csEnd));
+            csEnd = CSCurrentIP.lastIndexOf('.');
+            if (csEnd == -1) {
+                LVIPList.setAdapter(APIPList);
+                return;
+            }
+            IPTmp = CSCurrentIP.substring(0, csEnd);
 
-        BTScanCount = 0;
-        BTScanTotal = dAddEnd - dAddStart + 1;
-        BTScan.setEnabled(false);
-        PBScanProgress.setVisibility(View.VISIBLE);
+            BTScanCount = 0;
+            BTScanTotal = dAddEnd - dAddStart + 1;
+            setCtrlState(false);
 
-        for (count = 0; count < BTScanTotal; count++) {
-            //Log.d(TAG, String.format(IPTmp + ".%d", count));
-            ScanThread(String.format(IPTmp + ".%d", count+dAddStart));
+            for (count = 0; count < BTScanTotal; count++) {
+                //Log.d(TAG, String.format(IPTmp + ".%d", count));
+                ScanThread(String.format(IPTmp + ".%d", count + dAddStart));
+            }
+        }else if(iProgressState == PROGRESS_STATE_SCAN){
+            cancelExecPing();
+            setCtrlState(true);
         }
     }
 
@@ -173,5 +220,17 @@ public class MainActivity extends ActionBarActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onResume(){
+        super.onResume();
+    }
+
+    @Override
+    public void onPause(){
+        super.onPause();
+        cancelExecPing();
+        setCtrlState(true);
     }
 }
