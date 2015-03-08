@@ -9,7 +9,9 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 
 import java.util.concurrent.ExecutorService;
@@ -23,7 +25,16 @@ public class MainActivity extends ActionBarActivity {
     private TextView TWCurrentIP;
     private String CSCurrentIP;
     private Button BTScan;
+    private ProgressBar PBScanProgress;
+
+    private EditText ETStartAddress;
+    private EditText ETEndAddress;
+
     private int BTScanCount = 0x0;
+    private int BTScanTotal = 0x0;
+
+    private String StringStartAddress;
+    private String StringEndAddress;
 
     private ArrayAdapter<String> APIPList;
     private ListView LVIPList;
@@ -36,11 +47,27 @@ public class MainActivity extends ActionBarActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        ETStartAddress = (EditText) findViewById(R.id.editTextScanStartIP);
+        ETEndAddress = (EditText) findViewById(R.id.editTextScanEndIP);
+
         TWCurrentIP = (TextView) findViewById(R.id.TextViewCurrentIP);
         CSCurrentIP = NetTool.getLocAddress();
         if (TWCurrentIP != null) {
-            if (CSCurrentIP != null) {
+            if ((CSCurrentIP != null) && (CSCurrentIP.compareTo("") != 0)) {
                 TWCurrentIP.setText(CSCurrentIP);
+
+                int csEnd = CSCurrentIP.lastIndexOf('.');
+                String IpTmp = new String(CSCurrentIP.substring(0, csEnd));
+                if (csEnd != -1) {
+                    StringStartAddress = new String(String.format(IpTmp + ".%d", 0x0));
+                    StringEndAddress = new String(String.format(IpTmp + ".%d", 0xff));
+
+                    ETStartAddress.setText(StringStartAddress);
+                    ETEndAddress.setText(StringEndAddress);
+                } else {
+                    StringStartAddress = "";
+                    StringEndAddress = "";
+                }
             } else {
                 TWCurrentIP.setText("Can't Get IP address");
             }
@@ -54,6 +81,8 @@ public class MainActivity extends ActionBarActivity {
 
         LVIPList = (ListView) findViewById(R.id.listViewActivityIP);
         LVIPList.setAdapter(APIPList);
+
+        PBScanProgress = (ProgressBar) findViewById(R.id.progressBarScanIP);
     }
 
     private void ScanThread(final String ip) {
@@ -70,14 +99,17 @@ public class MainActivity extends ActionBarActivity {
                     });
                 }
                 BTScanCount++;
-                Log.d(TAG, "BTScanCount:"+BTScanCount);
-                if (BTScanCount == 256) {
-                    handler.post(new Runnable() {
-                        public void run() {
+                Log.d(TAG, "BTScanCount:" + BTScanCount);
+
+                handler.post(new Runnable() {
+                    public void run() {
+                        PBScanProgress.setProgress(BTScanCount * 100 / BTScanTotal);
+                        if (BTScanCount == BTScanTotal) {
                             BTScan.setEnabled(true);
+                            PBScanProgress.setVisibility(View.INVISIBLE);
                         }
-                    });
-                }
+                    }
+                });
             }
 
         });
@@ -87,9 +119,21 @@ public class MainActivity extends ActionBarActivity {
         int count;
         String IPTmp;
         int csEnd;
+        int dAddStart, dAddEnd;
 
         APIPList.clear();
-        if (CSCurrentIP == null) {
+
+        StringStartAddress = ETStartAddress.getText().toString();
+        StringEndAddress = ETEndAddress.getText().toString();
+
+        if (NetTool.compareSameSubIP(StringStartAddress, StringEndAddress) == false) {
+            LVIPList.setAdapter(APIPList);
+            return;
+        }
+
+        dAddStart = NetTool.getIPNumber(StringStartAddress);
+        dAddEnd = NetTool.getIPNumber(StringEndAddress);
+        if((dAddStart == -1) || (dAddEnd == -1) || ((dAddEnd -dAddStart) < 0)){
             LVIPList.setAdapter(APIPList);
             return;
         }
@@ -102,11 +146,13 @@ public class MainActivity extends ActionBarActivity {
         IPTmp = new String(CSCurrentIP.substring(0, csEnd));
 
         BTScanCount = 0;
+        BTScanTotal = dAddEnd - dAddStart + 1;
         BTScan.setEnabled(false);
+        PBScanProgress.setVisibility(View.VISIBLE);
 
-        for (count = 114; count < 256; count++) {
+        for (count = 0; count < BTScanTotal; count++) {
             //Log.d(TAG, String.format(IPTmp + ".%d", count));
-            ScanThread(String.format(IPTmp + ".%d", count));
+            ScanThread(String.format(IPTmp + ".%d", count+dAddStart));
         }
     }
 

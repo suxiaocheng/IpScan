@@ -80,4 +80,38 @@ public class NetTool {
     public boolean ping(String str) {
         return pingCmdExec(str);
     }
+
+    public static int getIPNumber(String ip){
+        int result = -1;
+        int csEnd;
+        String IPTmp;
+
+        csEnd = ip.lastIndexOf('.');
+        if (csEnd == -1) {
+            return result;
+        }
+        IPTmp = new String(ip.substring(csEnd+1));
+
+        result = Integer.parseInt(IPTmp);
+
+        return result;
+    }
+
+    public static boolean compareSameSubIP(String ip1, String ip2){
+        int csEnd1, csEnd2;
+        String IPTmp1, IPTmp2;
+
+        csEnd1 = ip1.lastIndexOf('.');
+        csEnd2 = ip2.lastIndexOf('.');
+        if((csEnd1 == -1) || (csEnd2 == -1)){
+            return false;
+        }
+
+        IPTmp1 = new String(ip1.substring(0, csEnd1));
+        IPTmp2 = new String(ip2.substring(0, csEnd2));
+        if(IPTmp1.compareTo(IPTmp2) == 0){
+            return true;
+        }
+        return false;
+    }
 }

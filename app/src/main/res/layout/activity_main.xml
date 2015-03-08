@@ -2,49 +2,109 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    android:paddingBottom="@dimen/activity_vertical_margin"
     tools:context=".MainActivity">
 
 
     <TextView
+        android:id="@+id/TextViewIPInfo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="IP Address:"
-        android:id="@+id/TextViewIPInfo"
-        android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentTop="true"
+        android:text="IP Address:"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
 
     <TextView
+        android:id="@+id/TextViewCurrentIP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="NULL"
-        android:id="@+id/TextViewCurrentIP"
         android:layout_alignParentTop="true"
+        android:layout_toEndOf="@+id/TextViewIPInfo"
         android:layout_toRightOf="@+id/TextViewIPInfo"
-        android:layout_toEndOf="@+id/TextViewIPInfo" />
+        android:text="NULL"
+        android:textAppearance="?android:attr/textAppearanceMedium" />
+
+    <LinearLayout
+        android:id="@+id/LinearLayoutStartIP"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="false"
+        android:layout_below="@+id/TextViewIPInfo"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/textViewStartIPInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:text="Scan Start IP:"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <EditText
+            android:id="@+id/editTextScanStartIP"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/textViewStartIPInfo"
+            android:layout_weight="1" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/LinearLayoutEndIP"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="false"
+        android:layout_below="@+id/LinearLayoutStartIP"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/textViewEndIPInfo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:text="Scan End IP:"
+            android:textAppearance="?android:attr/textAppearanceMedium" />
+
+        <EditText
+            android:id="@+id/editTextScanEndIP"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/textViewEndIPInfo"
+            android:layout_weight="1" />
+
+    </LinearLayout>
 
     <ListView
+        android:id="@+id/listViewActivityIP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/listViewActivityIP"
-        android:layout_alignParentRight="true"
+        android:layout_above="@+id/progressBarScanIP"
         android:layout_alignParentEnd="true"
-        android:layout_below="@+id/TextViewIPInfo"
-        android:layout_above="@+id/buttonScanIP" />
+        android:layout_alignParentRight="true"
+        android:layout_below="@+id/LinearLayoutEndIP" />
 
     <Button
+        android:id="@+id/buttonScanIP"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Scan"
-        android:id="@+id/buttonScanIP"
-        android:layout_toStartOf="@+id/TextViewCurrentIP"
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
-        android:onClick="ScanClick" />
+        android:layout_toStartOf="@+id/TextViewCurrentIP"
+        android:onClick="ScanClick"
+        android:text="Scan" />
+
+    <ProgressBar
+        android:id="@+id/progressBarScanIP"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/buttonScanIP"
+        android:layout_centerHorizontal="true"
+        android:visibility="invisible" />
+
 </RelativeLayout>
